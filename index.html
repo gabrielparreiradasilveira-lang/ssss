@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NeuroTrack – Registro e Controle</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="assets/icon-192.png">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="stylesheet" href="style.css">
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js');
+      });
+    }
+  </script>
+</head>
+<body>
+  <div class="container">
+    <header class="flex" style="justify-content:space-between">
+      <div>
+        <h1 style="margin:8px 0">NeuroTrack</h1>
+        <small>Registro diário, análise e prevenção – feito para iPhone e Web (PWA).</small>
+      </div>
+      <button class="primary" id="installBtn" hidden>Instalar</button>
+    </header>
+
+    <nav>
+      <button class="tab" data-tab="log">Registro</button>
+      <button class="tab" data-tab="dashboard">Painel</button>
+      <button class="tab" data-tab="trends">Tendências</button>
+      <button class="tab" data-tab="settings">Configurações</button>
+    </nav>
+
+    <!-- Log Tab -->
+    <section id="log" class="card">
+      <h2>Registro do Dia</h2>
+      <form id="entryForm">
+        <div class="grid">
+          <div>
+            <label>Data</label>
+            <input type="date" id="date">
+          </div>
+          <div>
+            <label>Humor (0–10)</label>
+            <input type="number" id="mood" min="0" max="10" step="1" value="5">
+          </div>
+          <div>
+            <label>Energia (0–10)</label>
+            <input type="number" id="energy" min="0" max="10" step="1" value="5">
+          </div>
+          <div>
+            <label>Qualidade do sono (0–10)</label>
+            <input type="number" id="sleep" min="0" max="10" step="1" value="6">
+          </div>
+        </div>
+
+        <div class="grid">
+          <div>
+            <label>Sensibilidade – Som</label>
+            <input type="range" id="sens_sound" min="0" max="10" value="3">
+          </div>
+          <div>
+            <label>Sensibilidade – Luz</label>
+            <input type="range" id="sens_light" min="0" max="10" value="3">
+          </div>
+          <div>
+            <label>Sensibilidade – Toque</label>
+            <input type="range" id="sens_touch" min="0" max="10" value="3">
+          </div>
+          <div>
+            <label>Sensibilidade – Cheiros</label>
+            <input type="range" id="sens_smell" min="0" max="10" value="3">
+          </div>
+        </div>
+
+        <div class="grid">
+          <div>
+            <label>Interações sociais</label>
+            <select id="social">
+              <option value="agradavel">Agradável</option>
+              <option value="neutra">Neutra</option>
+              <option value="desgastante">Desgastante</option>
+            </select>
+          </div>
+          <div>
+            <label>Exposição sensorial</label>
+            <select id="exposure">
+              <option value="baixa">Baixa</option>
+              <option value="média">Média</option>
+              <option value="alta">Alta</option>
+            </select>
+          </div>
+          <div>
+            <label>Exercício (min)</label>
+            <input type="number" id="exercise" min="0" max="300" step="5" value="0">
+          </div>
+          <div>
+            <label>Medicação (tomou?)</label>
+            <select id="meds">
+              <option value="sim">Sim</option>
+              <option value="nao">Não</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label>Gatilhos (separe por vírgula)</label>
+          <input type="text" id="triggers" placeholder="ex.: barulho, multirão, calor">
+        </div>
+        <div>
+          <label>Estratégias que ajudaram</label>
+          <input type="text" id="helps" placeholder="ex.: fone, pausa, caminhada">
+        </div>
+        <div>
+          <label>Notas</label>
+          <textarea id="notes" rows="3" placeholder="Observações do dia"></textarea>
+        </div>
+
+        <div class="flex" style="justify-content:space-between;margin-top:10px">
+          <button type="submit" class="primary">Salvar registro</button>
+          <div class="flex">
+            <button type="button" id="exportJson">Exportar JSON</button>
+            <button type="button" id="exportCsv">Exportar CSV</button>
+            <label class="ghost" style="padding:10px 14px;cursor:pointer">
+              Importar JSON
+              <input type="file" id="importJson" accept="application/json" style="display:none">
+            </label>
+          </div>
+        </div>
+      </form>
+
+      <hr>
+      <div id="recentList" class="card">
+        <h3>Registros recentes</h3>
+        <table id="table"></table>
+      </div>
+    </section>
+
+    <!-- Dashboard Tab -->
+    <section id="dashboard" class="card hidden">
+      <h2>Painel</h2>
+      <div class="grid">
+        <div class="card">
+          <div>Risco de sobrecarga hoje</div>
+          <div class="kpi" id="riskKpi">–</div>
+          <small id="riskWhy"></small>
+        </div>
+        <div class="card">
+          <div>Últimos 7 dias – média de humor</div>
+          <div class="kpi" id="kpiMood">–</div>
+          <small>Mantenha o básico: sono, pausas e rotina previsível.</small>
+        </div>
+        <div class="card">
+          <div>Gatilho mais frequente</div>
+          <div class="kpi" id="topTrigger">–</div>
+          <small id="topTriggerTips"></small>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Check-list rápido</h3>
+        <div class="grid">
+          <label class="tag"><input type="checkbox" class="ck"> Sono ok (7–9h)</label>
+          <label class="tag"><input type="checkbox" class="ck"> Pausa a cada 90 min</label>
+          <label class="tag"><input type="checkbox" class="ck"> Fone/óculos à mão</label>
+          <label class="tag"><input type="checkbox" class="ck"> Agenda sem surpresas</label>
+          <label class="tag"><input type="checkbox" class="ck"> Planejou descompressão</label>
+        </div>
+      </div>
+    </section>
+
+    <!-- Trends Tab -->
+    <section id="trends" class="card hidden">
+      <h2>Tendências</h2>
+      <div>
+        <canvas id="chartMood" height="200"></canvas>
+      </div>
+      <div style="margin-top:16px">
+        <canvas id="chartSens" height="200"></canvas>
+      </div>
+    </section>
+
+    <!-- Settings Tab -->
+    <section id="settings" class="card hidden">
+      <h2>Configurações</h2>
+      <p>Seu dados ficam **apenas neste dispositivo** (localStorage). Você pode exportar para backup e importar depois.</p>
+      <div class="grid">
+        <div class="card">
+          <h3>Rotina</h3>
+          <label>Horário ideal de dormir</label>
+          <input type="time" id="sleepAt">
+          <label>Horário ideal de acordar</label>
+          <input type="time" id="wakeAt">
+          <button id="savePrefs" class="primary" style="margin-top:10px">Salvar preferências</button>
+        </div>
+        <div class="card">
+          <h3>Reset</h3>
+          <button id="wipe" class="ghost">Apagar todos os dados (cuidado)</button>
+        </div>
+      </div>
+      <footer>
+        <small>NeuroTrack – PWA. Para instalar no iPhone: compartilhar → “Adicionar à Tela de Início”.</small>
+      </footer>
+    </section>
+  </div>
+
+  <!-- Chart.js (via CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="app.js"></script>
+  <script>
+    // PWA install prompt
+    let deferredPrompt;
+    const installBtn = document.getElementById('installBtn');
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      installBtn.hidden = false;
+    });
+    installBtn?.addEventListener('click', async () => {
+      deferredPrompt?.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome) installBtn.hidden = true;
+      deferredPrompt = null;
+    });
+  </script>
+</body>
+</html>
